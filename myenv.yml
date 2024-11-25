@@ -1,0 +1,10 @@
+name: OBS-VideoPlayer
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - numpy
+  - python=3.12
+  - pip:
+      - obs-websocket-py==1.0
+      - mediapipe==0.10.18
