@@ -3,9 +3,14 @@ import threading
 import queue
 import numpy as np
 import platform
+
+from frame_processing.ProcessFrame import ProcessFrame
+
 DEFAULT_VID_PATH = "test/Open_af_Alter-Rally!.mp4"  # Set to 0 for default webcam
 HEIGHT = 1080
 WIDTH = 1920
+
+####### DELETE BETWEEN ONCE REFACTORED #######
 from shoulderFind import process
 
 
@@ -34,13 +39,14 @@ class VideoPlayer:
 
 				self.zoom_center = (x,y)
 
-	def __init__(self, buffer_size=100):
+	def __init__(self, buffer_size: int = 100, frame_processor: ProcessFrame = ProcessFrame(), reset_processor_on_load=True):
 		# Initialize playback window and basic variables
 		cv2.namedWindow('Video Player')
 		self.cap = None
 		self.video_path = None
 		self.paused = True
 		self.playback_speed = 30  # in milliseconds
+		self.reset_processor_on_load = reset_processor_on_load
 
 		# Buffering of frames
 		self.buffer_size = buffer_size
@@ -51,9 +57,6 @@ class VideoPlayer:
 
 		# Replay status
 		self.replay_active = False
-		self.receiving_person_left = True
-		self.save_highest = False
-		self.highest_y = 100000000
 		self.post_process = False
 		self.save_frame = None
 
@@ -62,6 +65,15 @@ class VideoPlayer:
 		self.zoom_factor = 1.0
 		self.zoom_center = (WIDTH // 2, HEIGHT // 2)  # Absolute center (x, y)
 		cv2.setMouseCallback('Video Player', self.mouse_callback)
+
+		####### DELETE BETWEEN ONCE REFACTORED #######
+		self.receiving_person_left = True
+		self.save_highest = False
+		self.highest_y = 100000000
+		####### REPLACE WITH BELOW FOR TEST ###########
+		# Processing Function
+		self.frame_processor = frame_processor
+
 
 	def load_video(self, video_path=DEFAULT_VID_PATH):
 		"""Load the video file and initialize playback."""
@@ -77,8 +89,12 @@ class VideoPlayer:
 		self.buffer_thread.daemon = True
 		self.buffer_thread.start()
 
+		####### DELETE BETWEEN ONCE REFACTORED #######
 		self.save_highest = False
 		self.highest_y = 100000000
+		####### REPLACE WITH BELOW FOR TEST ###########
+		if self.reset_processor_on_load:
+			self.frame_processor = self.frame_processor.__class__()
 
 	def set_replay_status(self, status=False, post_process=False):
 		"""External programs call this to update replay status."""
@@ -86,7 +102,7 @@ class VideoPlayer:
 			self.replay_active = status
 			print(f"Replay status set to: {self.replay_active}")
 			self.post_process = post_process
-			print(f"Analyse High set to: {self.post_process}")
+			print(f"Post Processing set to: {self.post_process}")
 			if status:
 				self.load_video()
 			else:
@@ -104,8 +120,11 @@ class VideoPlayer:
 				ret, frame = self.cap.read()
 				try:
 					if self.post_process:
+						####### DELETE BETWEEN ONCE REFACTORED #######
 						frame, new_y = process(frame, self.receiving_person_left, self.highest_y, self.save_highest)
 						self.highest_y = new_y
+						####### REPLACE WITH BELOW FOR TEST ###########
+						frame = self.frame_processor.process_frame(frame)
 				except TypeError:
 					print("error processing... trying to continue")
 
@@ -118,15 +137,13 @@ class VideoPlayer:
 
 	def play(self):
 		"""Main playback loop."""
-		print("Controls:")
+		print("Base Controls:")
 		print("Space: Pause/Play")
 		print("Arrow Up: Speed up")
 		print("Arrow Down: Slow down")
 		print("Q: Quit")
-		print(". start high detection measuring point")
-		print("/ Change receiver half detect")
-		print("Z: Start zoom box")
-		print("X: Start Player Analyse")
+		print("----- POST PROCESSING CONTROLS -----")
+		print(self.frame_processor.get_control_text())
 
 		while True:
 			if not self.is_replay_active():
@@ -138,11 +155,11 @@ class VideoPlayer:
 				if key == ord('q'):
 					self.cleanup()
 					break
-				elif key == ord('/'):
-					self.receiving_person_left = not self.receiving_person_left
-					print(f"Receiver Left: {self.receiving_person_left}")
-
-				continue
+				# elif key == ord('/'):
+				# 	self.receiving_person_left = not self.receiving_person_left
+				# 	print(f"Receiver Left: {self.receiving_person_left}")
+				#
+				# continue
 
 			# Playback active
 			if not self.paused and not self.frame_buffer.empty():
@@ -168,6 +185,7 @@ class VideoPlayer:
 				self.playback_speed = max(1, self.playback_speed - 5)
 			elif key == 84 or key == ord('s'):  # Down Arrow: Slow down
 				self.playback_speed += 5
+			####### DELETE BETWEEN ONCE REFACTORED #######
 			elif key == ord('.'):
 				self.save_highest = not self.save_highest
 				self.highest_y = 1000000
@@ -180,13 +198,16 @@ class VideoPlayer:
 				self.post_process = not self.post_process
 				self.frame_buffer = queue.Queue(maxsize=self.buffer_size)
 				print(f"Analysing High: {self.post_process}")
+			####### REPLACE WITH BELOW FOR TEST ###########
+			else:
+				self.frame_processor.key_action(key)
 
 
 		
 
-	def apply_zoom(self, frame):
+	def apply_zoom(self, frame, zoom_factor_override=False):
 		"""Apply zoom to the given frame."""
-		if self.zoom_factor == 1.0:
+		if self.zoom_factor == 1.0 or zoom_factor_override:
 			return frame
 
 		h, w, _ = frame.shape
@@ -224,3 +245,5 @@ class VideoPlayer:
 			self.cap.release()
 
 		self.frame_buffer = queue.Queue(maxsize=self.buffer_size)
+
+		self.frame_processor.cleanup()

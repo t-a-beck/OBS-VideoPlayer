@@ -4,7 +4,7 @@ import mediapipe as mp
 
 # Initialize MediaPipe Pose model
 mp_pose = mp.solutions.pose
-pose = mp_pose.Pose(static_image_mode=False, model_complexity=2, enable_segmentation=True, smooth_segmentation=False)
+pose = mp_pose.Pose(static_image_mode=False, model_complexity=2, enable_segmentation=True, smooth_segmentation=True)
 mp_drawing = mp.solutions.drawing_utils
 
 
