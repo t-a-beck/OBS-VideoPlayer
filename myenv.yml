@@ -5,6 +5,7 @@ channels:
 dependencies:
   - numpy
   - python=3.12
+  - pip=24.3
   - pip:
       - obs-websocket-py==1.0
       - mediapipe==0.10.18
