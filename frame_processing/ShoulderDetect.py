@@ -11,7 +11,7 @@ class ShoulderDetect(ProcessFrame):
 	def __init__(self):
 		control_dict = {
 			".": "start high detection measuring point",
-			"/": "Change receiver half detect",
+			"/": "change if receiver is on left or right side",
 			"h": "Highlight receiver with pose detection"
 		}
 
