@@ -1,17 +1,18 @@
-from typing import Tuple
+from typing import Tuple, override
 
-from ProcessFrame import ProcessFrame
+from frame_processing.ProcessFrame import ProcessFrame
 import mediapipe as mp
 import numpy as np
 import cv2
 
 
 class ShoulderDetect(ProcessFrame):
+	@override
 	def __init__(self):
 		control_dict = {
 			".": "start high detection measuring point",
 			"/": "Change receiver half detect",
-			"X": "Highlight receiver with pose detection"
+			"h": "Highlight receiver with pose detection"
 		}
 
 		ProcessFrame.__init__(self, control_dict)
@@ -35,18 +36,19 @@ class ShoulderDetect(ProcessFrame):
 		self.pose_highlight = True
 
 
+	@override
 	def key_action(self, key) -> None:
-		if key in self.control_keys:
-			if key == ord("."):
-				self.serve = not self.serve
-				print(f"Serve started: {self.serve}")
-			elif key == ord("/"):
-				self.left = not self.left
-				print(f"Receiver Left: {self.left}")
-			elif key == ord("X"):
-				self.pose_highlight = not self.pose_highlight
-				print(f"Receiver Pose Highlight: {self.pose_highlight}")
+		if key == ord("."):
+			self.serve = not self.serve
+			print(f"Serve started: {self.serve}")
+		elif key == ord("/"):
+			self.left = not self.left
+			print(f"Receiver Left: {self.left}")
+		elif key == ord("h"):
+			self.pose_highlight = not self.pose_highlight
+			print(f"Receiver Pose Highlight: {self.pose_highlight}")
 
+	@override
 	def process_frame(self, frame):
 		# Convert frame to RGB for MediaPipe
 		image_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -57,7 +59,7 @@ class ShoulderDetect(ProcessFrame):
 
 		# Check if shoulders are detected
 		if pose_result.pose_landmarks:
-			self.reshift_landmarks_to_original(self.left, pose_result)
+			self.reshift_landmarks_to_original(pose_result, self.left,)
 
 			if self.pose_highlight:
 				self.draw_pose(frame, pose_result)
@@ -72,11 +74,12 @@ class ShoulderDetect(ProcessFrame):
 
 			if self.serve:
 				y_actual = min(self.y_prev, cur_shoulder)
-
-			self.y_prev = y_actual
+				self.y_prev = y_actual
+			else:
+				self.y_prev = cur_shoulder
 
 			# Draw shoulder line
-			cv2.line(frame, (0, y_actual), (frame.shape[1], y_actual), (255, 0, 255), 4)
+			cv2.line(frame, (0, self.y_prev), (frame.shape[1], self.y_prev), (255, 0, 255), 4)
 
 		return frame
 

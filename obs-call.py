@@ -1,13 +1,13 @@
 from obswebsocket import obsws, events
 from VideoPlayer import VideoPlayer
-
+from frame_processing.ShoulderDetect import ShoulderDetect
 # Configuration
 OBS_HOST = "localhost"
 OBS_PORT = 4455  # Default WebSocket port
 OBS_PASSWORD = "very_secret"  # Replace with OBS WebSocket password if wanted
 
 TARGET_SCENE = "Replay"
-POST_PROCESS_REPLAY_SCENE = "Replay_POST_PROCESS"
+POST_PROCESS_REPLAY_SCENE = "Replay"  # _POST_PROCESS
 
 
 def on_switch_scene(message):
@@ -16,11 +16,11 @@ def on_switch_scene(message):
 	"""
 	print(f"Received Scene change: {message.getSceneName()}")
 	if message.getSceneName() == TARGET_SCENE:
-		player.set_replay_status(True)
+		player.set_replay_status(True, False)
 	elif message.getSceneName() == POST_PROCESS_REPLAY_SCENE:
 		player.set_replay_status(True, True)  # also add post_processing
 	else:
-		player.set_replay_status(False)  # Deactivate replay
+		player.set_replay_status(False, False)  # Deactivate replay
 
 
 def main():
@@ -32,9 +32,10 @@ def main():
 	ws.register(on_switch_scene, events.CurrentProgramSceneChanged)
 	ws.connect()
 
-	# Construct VideoPlayer Object
+	# Construct VideoPlayer Object with shoulder detector as frame processing function
+
 	global player
-	player = VideoPlayer()
+	player = VideoPlayer(frame_processor=ShoulderDetect())
 	player.play()
 
 	try:
