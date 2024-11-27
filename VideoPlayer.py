@@ -151,8 +151,9 @@ class VideoPlayer:
 		"""Main playback loop."""
 		print("Base Controls:")
 		print("Space: Pause/Play")
-		print("Arrow Up: Speed up")
-		print("Arrow Down: Slow down")
+		print("Scroll up/ down: Zoom in/ out based on mouse position")
+		print("W: Speed up")
+		print("S: Slow down")
 		print("Q: Quit")
 		print("X: start post-processing")
 		print("----- POST PROCESSING CONTROLS -----")
