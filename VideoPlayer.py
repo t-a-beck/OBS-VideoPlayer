@@ -1,32 +1,39 @@
-import time
-
 import cv2
 import threading
 from queue import Queue
 import numpy as np
 import platform
-
 from frame_processing.ProcessFrame import ProcessFrame
 
-DEFAULT_VID_PATH = "test/Open_af_Alter-Rally!.mp4"  # Set to 0 for default webcam
+
+# Modify as relevant:
+
+DEFAULT_VID_PATH_REPLAY_1 = "test/Open_af_Alter-Rally!.mp4"  # Replay 1 Path
+DEFAULT_VID_PATH_REPLAY_2 = "test/Open_af_Alter-Rally!.mp4"  # Replay 2 Path
+DEFAULT_VID_PATH_REPLAY_3 = "test/Open_af_Alter-Rally!.mp4"  # Replay 3 Path
 HEIGHT = 1080
 WIDTH = 1920
 
 
+# Don't change below this point unless you know what you're doing
+
+REPLAY_DICT = {1: DEFAULT_VID_PATH_REPLAY_1, 2: DEFAULT_VID_PATH_REPLAY_2, 3: DEFAULT_VID_PATH_REPLAY_3}
 
 class VideoPlayer:
 	def mouse_callback(self, event, x, y, flags, param):
 
 		"""Handle mouse events for zooming. Note only works for Windows so MAC workaround with clicking"""
-		zoom_speed = 1.0
+
 		max_zoom = 10.0
 		if event == cv2.EVENT_MOUSEWHEEL and platform.system() == "Windows":
+			zoom_speed = 0.3
 			if flags > 0:  # Scroll up
 				self.zoom_factor = min(self.zoom_factor + zoom_speed, max_zoom)  # Max zoom factor
 			elif flags < 0:  # Scroll down
 				self.zoom_factor = max(self.zoom_factor - zoom_speed, 1.0)  # Min zoom factor
 
 		elif event == cv2.EVENT_FLAG_LBUTTON or event == cv2.EVENT_FLAG_RBUTTON:
+			zoom_speed = 1.0
 			if event == 1:  # Left click
 				self.zoom_factor = min(self.zoom_factor + zoom_speed, max_zoom)  # Max zoom factor
 			# print("zooming in ...")
@@ -73,8 +80,11 @@ class VideoPlayer:
 		# Processing Function
 		self.frame_processor = frame_processor
 
-	def load_video(self, video_path: str = DEFAULT_VID_PATH):
+	def load_video(self, cam_number: int = 1):
 		"""Load the video file and initialize playback."""
+		video_path = REPLAY_DICT.get(cam_number, DEFAULT_VID_PATH_REPLAY_1)
+
+
 		self.video_path = video_path
 		self.cap = cv2.VideoCapture(video_path)
 		if not self.cap.isOpened():
@@ -91,7 +101,7 @@ class VideoPlayer:
 		if self.reset_processor_on_load:
 			self.frame_processor = self.frame_processor.__class__()
 
-	def set_replay_status(self, status: bool = False, post_process: bool = False) -> None:
+	def set_replay_status(self, status: bool = False, post_process: bool = False, cam_number: int = 1) -> None:
 		"""External programs call this to update replay status."""
 		with self.lock:
 			self.replay_active = status
@@ -99,7 +109,7 @@ class VideoPlayer:
 			self.post_process = post_process
 			print(f"Post Processing set to: {self.post_process}")
 			if status:
-				self.load_video()
+				self.load_video(cam_number)
 			else:
 				self.cleanup()
 
@@ -151,12 +161,13 @@ class VideoPlayer:
 		"""Main playback loop."""
 		print("Base Controls:")
 		print("Space: Pause/Play")
-		print("Arrow Up: Speed up")
-		print("Arrow Down: Slow down")
+		print("Scroll up/ down: Zoom in/ out based on mouse position")
+		print("W: Speed up")
+		print("S: Slow down")
 		print("Q: Quit")
-		print("X: start post-processing")
-		print("----- POST PROCESSING CONTROLS -----")
-		print(self.frame_processor.get_control_text())
+		# print("X: start post-processing")
+		# print("----- POST PROCESSING CONTROLS -----")
+		# print(self.frame_processor.get_control_text())
 
 		while True:
 			if not self.is_replay_active():
